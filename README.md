@@ -3,6 +3,10 @@
 Derek Merck <derek_merck@brown.edu>
 Rhode Island Hospital
 
+Contributions from
+Vanessa Sochat <vsochat@stanford.edu)
+Stanford University School of Medicine
+
 Configures and spins up a Docker-based open-source<sup><a name="^splunk_ref">[1](#^splunk)</a></sup> medical imaging informatics platform.  Originally developed to support the RIH Clinical Imaging Research Repository (CIRR).
 
 
@@ -25,7 +29,7 @@ Configures and spins up a Docker-based open-source<sup><a name="^splunk_ref">[1]
 ## Dependencies
 
 - [Docker], [docker-compose] for service virtualization
-- [Python] 2.7, [pyyaml], [jinja2] for `bootstrap.py`
+- [Python], [pyyaml], [jinja2] for `bootstrap.py`
 
 [Docker]:http://www.docker.com
 [docker-compose]:https://docs.docker.com/compose/
@@ -41,6 +45,15 @@ Furthermore, _do not_ use `docker-compose up` with the xnat service; use `docker
 
 `bootstrap.py` will read a file called `docker-compose.shadow.yml` and use any override variables or config information provided there.  All generated configuration files are similarly tagged as "shadow" and should not be indexed by `git` because they will contain plain-text account credentials.  Depending on which variables are used, `docker-compose.shadow.yml` may not be necessary to include when creating the containers themselves.
 
+
+## Stanford Development
+I (@vsoch) am using the simple Orthanc server (to start) located in [orthanc-docker](orthanc-docker). I've modified the code below to work with Python 3.5, however I'm starting with the simpler of these two versions. Complete instructions can be found in the [README](orthancp-docker/README.md)
+
+This is an isolated Orthanc using a Postgres backend that can be created directly using `docker-compose` from the [orthancp-docker](orthancp-docker) directory.  This version has a much simpler configuration process, and by default it will create services on a separate network.
+
+
+## Rhode Island Development
+
 ### Postgres
 
 Orthanc and XNAT services rely on Postgres.  The Postgres service has to be available before Orthanc or XNAT can be configured.
@@ -51,8 +64,10 @@ $ docker-compose up -d postgres
 
 ### Orthanc w Postgres and Persistent Compressed Data Storage
 
+First you want to set up orthanc.json from the template with the configuration from the running database. You can do this as follows:
+
 ```bash
-$ python bootstrap.py orthanc  # Sets up orthanc.json from template, adds db
+$ python bootstrap.py orthanc
 $ docker-compose up -d orthanc
 ```
 
@@ -64,8 +79,6 @@ $ docker-compose up -d orthanc orthanc-reciever
 ```
 
 The additional DICOM receiver can be used as a proxy to accept DICOM transfers and queue them for the main clinical-facing repository.  The main repo slows down considerably as the DB grows large, particularly if compression is on.<sup><a name="^timing_ref">[2](#^timing)</a></sup>
-
-An isolated Orthanc using a Postgres backend can be created directly using `docker-compose` from the [orthancp-docker](orthancp-docker) directory.  That version has a much simpler configuration process, and by default it will create services on a separate network.
 
 
 ### XNAT w Postgres and Persistent Data Storage

@@ -1,133 +1,113 @@
-# CIRR UP!
-# Merck, Spring 2016
+postgres:
+  image: postgres
+  environment:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: passw0rd
+    PGDATA: /var/lib/postgresql/data
 
-version: '2.0'
-
-services:
-
-  # ----------------------------
-  postgres:
-  # ----------------------------
-    image: postgres
-    ports:
-    - "5432:5432"
-    environment:
-
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: passw0rd
-      PGDATA: /var/lib/postgresql/data
-
-    volumes:
+  volumes:
     - data:/var/lib/postgresql
     - logs:/var/log/postgresql
     # *.sh mounted in initdb.d will be sourced on run, should check to see if configured
     # Drop XNAT if necessary, add orthanc and orthanc_recv
     #- ./bootstrap-postgres.sh:/docker-entrypoint-initdb.d/bootstrap.sh:ro
 
-    # Interacting with the database:
-    # $ docker exec -it cirrdocker_db_1 sh -c 'echo "ALTER USER xnat WITH PASSWORD '\''my_xnat_pword'\'';" | exec psql -h "$POSTGRES_PORT_5432_TCP_ADDR" -p "$POSTGRES_PORT_5432_TCP_PORT" -U ${POSTGRES_USER}'
+  # Interacting with the database
+  # $ docker exec -it cirrdocker_db_1 sh -c 'echo "ALTER USER xnat WITH PASSWORD '\''my_xnat_pword'\'';" | exec psql -h "$POSTGRES_PORT_5432_TCP_ADDR" -p "$POSTGRES_PORT_5432_TCP_PORT" -U ${POSTGRES_USER}'
 
-  # ----------------------------
-  orthanc:
-  # See <https://github.com/jodogne/OrthancDocker>
-  # ----------------------------
-    # Churn if postgres is not responsive
-    restart: on-failure:10
-    image: jodogne/orthanc-plugins
-    command: ["--logdir=/var/log/orthanc", "/etc/orthanc/"]
-    ports:
+orthanc:
+# See <https://github.com/jodogne/OrthancDocker>
+# ----------------------------
+  # Churn if postgres is not responsive
+  restart: on-failure:10
+  image: jodogne/orthanc-plugins
+  command: ["--logdir=/var/log/orthanc", "/etc/orthanc/"]
+  ports:
     - "8080:8042"
     - "4242:4242"
-    links:
+  links:
     - postgres
-#    - xnat
-# This link forces it to want to bring up xnat first?
-    depends_on:
-    - postgres
-    volumes:
+
+  #    - xnat
+  volumes:
     - ./orthanc.shadow.json:/etc/orthanc/orthanc.json:ro
     - data:/var/lib/orthanc/db
     - logs:/var/log/orthanc
-    environment:
-      SITE_NAME: "Orthanc"
-      DICOM_AET:  "ORTHANC"
-#      COMPRESSION: "true"
-
-      USERS: '{
-        "admin": "passw0rd",
-        "orthanc": "orthanc"
-      }'
-
-
-      DICOM_MODALITIES: '{
-        "sample_modality" : [ "STORESCP", "localhost", 2000 ]
-      }'
-
-      ORTHANC_PEERS: '{
-        "sample_peer"  : [ "http://localhost:8043/", "alice", "alicePassword" ]
-      }'
-
-      DB_NAME: "orthanc"
-      DB_USER: "orthanc"
-      DB_PASSWORD: "passw0rd"
+  environment:
+    SITE_NAME: "Orthanc"
+    DICOM_AET:  "ORTHANC"
+#   COMPRESSION: "true"
+    USERS: '{
+      "admin": "passw0rd",
+      "orthanc": "orthanc"
+    }'
 
 
-  # ----------------------------
-  orthanc-receiver:
-  # ----------------------------
-    # Should EXTEND orthanc, but then can't include links or deps in orthanc
-    image: jodogne/orthanc-plugins
-    ports:
+    DICOM_MODALITIES: '{
+      "sample_modality" : [ "STORESCP", "localhost", 2000 ]
+    }'
+
+    ORTHANC_PEERS: '{
+      "sample_peer"  : [ "http://localhost:8043/", "alice", "alicePassword" ]
+    }'
+
+    DB_NAME: "orthanc"
+    DB_USER: "orthanc"
+    DB_PASSWORD: "passw0rd"
+
+
+orthanc-receiver:
+# ----------------------------
+  # Should EXTEND orthanc, but then can't include links or deps in orthanc
+  image: jodogne/orthanc-plugins
+  ports:
     - "8042:4380"
     - "4242:4342"
-    volumes:
+  volumes:
     - ./orthanc_recv.shadow.json:/etc/orthanc/orthanc.json:ro
     - data:/var/lib/orthanc_recv/db
     - logs:/var/log/orthanc_recv
-    links:
+  links:
     - postgres
     - orthanc
-    environment:
-      SITE_NAME: "Orthanc Receiver"
-      DICOM_AET:  "ORTHANC_RECV"
-      COMPRESSION: "false"
-      FORWARD_TO: "orthanc"
-      LOG_EXPORTED: "false"
+  environment:
+    SITE_NAME: "Orthanc Receiver"
+    DICOM_AET:  "ORTHANC_RECV"
+    COMPRESSION: "false"
+    FORWARD_TO: "orthanc"
+    LOG_EXPORTED: "false"
 
-      USERS: '{
+    USERS: '{
         "admin": "passw0rd",
         "orthanc": "orthanc"
       }'
 
-      DICOM_MODALITIES: '{
+    DICOM_MODALITIES: '{
         "sample_modality" : [ "STORESCP", "localhost", 2000 ]
       }'
 
-      ORTHANC_PEERS: '{
-        "sample_peer"  : [ "http://localhost:8043/", "alice", "alicePassword" ]
-      }'
+    ORTHANC_PEERS: '{
+      "sample_peer"  : [ "http://localhost:8043/", "alice", "alicePassword" ]
+    }'
 
-      DB_NAME: "orthanc_recv"
-      DB_USER: "orthanc"
-      DB_PASSWORD: "passw0rd"
+    DB_NAME: "orthanc_recv"
+    DB_USER: "orthanc"
+    DB_PASSWORD: "passw0rd"
 
-  # ----------------------------
-  xnat:
+xnat:
+
   # A configured local xnat template has to be built separately and tagged "xnat-builder"
   # I used <https://github.com/chaselgrove/xnat-docker>, complete through the final step
   # ----------------------------
     build: xnat-docker
     ports:
-    - "8080:8080"  # HTTP
-    - "8104:8042"  # DICOM
+      - "8080:8080"  # HTTP
+      - "8104:8042"  # DICOM
     volumes:
-    - data:/data/xnat
+      - data:/data/xnat
     links:
-    - postgres
-    - xnat-repo:repo
-    depends_on:
-    - postgres
-    - xnat-repo
+      - postgres
+      - xnat-repo:repo
     environment:
       XNAT_DIR: "/data/xnat"
       XNAT_URL: "http://dockerengine:8080"
@@ -136,30 +116,24 @@ services:
       DB_PASSWORD: "passw0rd"
       DB_NAME: "xnat165"
 
-  xnat-repo:
-    image: xnat-repo
+xnat-repo:
+  image: xnat-repo
 
-  # ----------------------------
-  splunk:
-  # ----------------------------
-    image: outcoldman/splunk:latest
-    hostname: splunk
-    volumes:
+splunk:
+  image: outcoldman/splunk:latest
+  hostname: splunk
+  volumes:
     - data:/opt/splunk/etc
     - data:/opt/splunk/var
-    volumes_from:
+  volumes_from:
     - postgres
     - orthanc
-#    - orthanc-receiver
+    # - orthanc-receiver
     - xnat
-    ports:
+  ports:
     - "1514:1514"   # Syslog
     - "1580:8000"   # HTTP
     # - Unk API?
-    environment:
-      SPLUNK_START_ARGS: "--accept-license"
-      # Need to add log directories to monitor as well...
-
-volumes:
-  data: {}
-  logs: {}
+  environment:
+    SPLUNK_START_ARGS: "--accept-license"
+    # Need to add log directories to monitor as well...

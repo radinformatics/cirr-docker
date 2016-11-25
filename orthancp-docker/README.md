@@ -7,7 +7,14 @@ Configures and spins up a Docker-based Orthanc instance with a Postgres backend.
 
 ## Requirements
 
-Set environment variables `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DB_USER`, and `DB_PASSWORD`.
+Set environment variables `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DB_USER`, and `DB_PASSWORD`. Eg:
+
+```bash
+export POSTGRES_USER='postgres'
+export POSTGRES_PASSWORD='postgres'
+export DB_USER='orthanc'
+export DB_PASSWORD='orthanc'
+```
 
 ## Usage
 

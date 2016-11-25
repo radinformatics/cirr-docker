@@ -1,57 +1,37 @@
-# ORTHANC UP!
-# Merck, Spring 2016
+postgres:
+  image: postgres
+  environment:
 
-version: '2.0'
+    # Necessary for initialization
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    PGDATA: /var/lib/postgresql/data
 
-services:
+    DB_USER: ${DB_USER}
+    DB_PASSWORD: ${DB_PASSWORD}
 
-  # ----------------------------
-  postgres:
-  # ----------------------------
-    image: postgres
-    ports:
-    - "5432:5432"
-    environment:
-
-      # Necessary for initialization
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      PGDATA: /var/lib/postgresql/data
-
-      DB_USER: ${POSTGRES_CIRR_USER}
-      DB_PASSWORD: ${POSTGRES_CIRR_PASSWORD}
-
-    volumes:
+  volumes:
     - data:/var/lib/postgresql
     - logs:/var/log/postgresql
     # *.sh mounted in initdb.d will be sourced on run, should check to see if configured
     - ./bootstrap-postgres.sh:/docker-entrypoint-initdb.d/bootstrap.sh:ro
 
-    # Interacting with the database:
+    # Interacting with the database
     # $ docker exec -it cirrdocker_db_1 sh -c 'echo "ALTER USER xnat WITH PASSWORD '\''my_xnat_pword'\'';" | exec psql -h "$POSTGRES_PORT_5432_TCP_ADDR" -p "$POSTGRES_PORT_5432_TCP_PORT" -U ${POSTGRES_USER}'
 
-  # ----------------------------
-  orthanc:
+orthanc:
   # See <https://github.com/jodogne/OrthancDocker>
-  # ----------------------------
 
-    # Churn if postgres is not responsive
-    restart: on-failure:10
+  restart: on-failure:10
 
-    image: jodogne/orthanc-plugins
-    command: ["--logdir=/var/log/orthanc", "/etc/orthanc/"]
-    ports:
+  image: jodogne/orthanc-plugins
+  command: ["--logdir=/var/log/orthanc", "/etc/orthanc/"]
+  ports:
     - "8042:8042"
     - "4242:4242"
-    volumes:
+  volumes:
     - ./orthanc.shadow.json:/etc/orthanc/orthanc.json:ro
     - data:/var/lib/orthanc/db
     - logs:/var/log/orthanc
-    links:
+  links:
     - postgres
-    depends_on:
-    - postgres
-
-volumes:
-  data: {}
-  logs: {}
